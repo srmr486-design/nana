@@ -43,18 +43,21 @@
             height: 100vh;
         }
 
-        /* 1920x1080 기준 캔버스 스케일링 컨테이너 */
+        /* 반응형 유동 키오스크 뷰포트 (고정 px 대신 100% 채움) */
         #kiosk-viewport {
-            width: 1920px;
-            height: 1080px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform-origin: center center;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             background: radial-gradient(circle at 50% 20%, #151d2f 0%, #070a12 100%);
+            transition: filter 1.2s ease-in-out;
+        }
+
+        /* 3분 유휴 시 화면 밝기 50% 절전 모드 */
+        body.dimmed #kiosk-viewport {
+            filter: brightness(0.5);
         }
 
         /* 스마트폰 화면 넘김 슬라이더 트랙 */
@@ -65,15 +68,37 @@
             transition: transform 0.65s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* 각 페이지 (4x2 그리드) */
+        /* 기본 가로 화면 (16:9 / 1920x1080 등): 4열 x 2행 */
         .page-grid {
             width: 50%;
             height: 100%;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(2, 1fr);
-            gap: 1.5rem;
+            gap: 1.25rem;
             padding: 0.5rem;
+        }
+
+        /* 세로형 스크린(피벗 모니터, 세로 키오스크): 2열 x 4행으로 자동 재배치 */
+        @media (max-aspect-ratio: 1/1) {
+            .page-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                gap: 0.75rem;
+            }
+            header h1 {
+                font-size: 1.25rem !important;
+            }
+            #clock-time {
+                font-size: 1.25rem !important;
+            }
+        }
+
+        /* 컴팩트 화면 대응 (높이가 낮은 울트라와이드 등) */
+        @media (max-height: 700px) {
+            .page-grid {
+                gap: 0.75rem;
+            }
         }
 
         /* 카드 터치 & 호버 애니메이션 */
@@ -100,6 +125,15 @@
             height: 100%;
             background: #3b82f6;
             transition: width 0.1s linear;
+        }
+
+        /* 5분 브레이크타임 오버레이 펄스 애니메이션 */
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.04); opacity: 1; }
+        }
+        .break-pulse {
+            animation: pulseGlow 3s infinite ease-in-out;
         }
 
         /* 모달 팝업 애니메이션 */
@@ -129,79 +163,77 @@
         .modal-exit {
             animation: scaleDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-
-        /* 3분 유휴 시 화면 밝기 50% 절전 모드 */
-        #kiosk-viewport {
-            transition: filter 1.2s ease-in-out;
-        }
-        body.dimmed #kiosk-viewport {
-            filter: brightness(0.5);
-        }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
-    <!-- 1920x1080 뷰포트 -->
-    <div id="kiosk-viewport" class="p-8">
+    <!-- 동적 반응형 뷰포트 (1920x1080 비율 기본 최적화) -->
+    <div id="kiosk-viewport" class="p-4 md:p-6 lg:p-8">
         <!-- 헤더 영역 -->
-        <header class="flex justify-between items-center h-20 px-4 mb-3 select-none">
-            <div class="flex items-center space-x-4">
-                <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <i class="fa-solid fa-play text-2xl text-white"></i>
+        <header class="flex justify-between items-center h-16 md:h-20 px-2 md:px-4 mb-2 md:mb-3 select-none flex-shrink-0">
+            <div class="flex items-center space-x-3 md:space-x-4">
+                <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+                    <i class="fa-solid fa-play text-xl md:text-2xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                    <h1 class="text-xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2 md:gap-3">
                         <span>나나자매와 띠진이</span>
-                        <span id="live-indicator" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 font-normal">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 실시간 연결됨
+                        <span id="live-indicator" class="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-normal">
+                            <span class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 animate-pulse"></span> 실시간 연결됨
                         </span>
                     </h1>
-                    <p class="text-sm text-gray-400 mt-0.5">총 16개 채널 • 5초마다 페이지가 자동 회전합니다.</p>
+                    <p class="text-xs md:text-sm text-gray-400 mt-0.5 hidden sm:block">총 16개 채널 • 5초마다 페이지가 자동 회전합니다.</p>
                 </div>
             </div>
 
             <!-- 컨트롤 영역: 페이지 표시기 & 타이머 바 & 버튼 -->
-            <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-3 md:space-x-6">
                 <!-- 페이지 스와이프 인디케이터 & 타이머 -->
-                <div class="flex items-center bg-gray-800/80 px-4 py-2.5 rounded-2xl border border-gray-700/60 gap-4 backdrop-blur-md">
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center bg-gray-800/80 px-3 md:px-4 py-2 md:py-2.5 rounded-2xl border border-gray-700/60 gap-3 md:gap-4 backdrop-blur-md">
+                    <div class="flex items-center gap-1.5 md:gap-2">
                         <button id="btn-prev-page" class="text-gray-400 hover:text-white px-1 active:scale-90 transition">
-                            <i class="fa-solid fa-chevron-left text-sm"></i>
+                            <i class="fa-solid fa-chevron-left text-xs md:text-sm"></i>
                         </button>
-                        <div class="flex items-center gap-2">
-                            <div id="dot-page-0" class="page-dot active w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                            <div id="dot-page-1" class="page-dot w-2.5 h-2.5 rounded-full bg-gray-600"></div>
+                        <div class="flex items-center gap-1.5 md:gap-2">
+                            <div id="dot-page-0" class="page-dot active w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-blue-500"></div>
+                            <div id="dot-page-1" class="page-dot w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-gray-600"></div>
                         </div>
                         <button id="btn-next-page" class="text-gray-400 hover:text-white px-1 active:scale-90 transition">
-                            <i class="fa-solid fa-chevron-right text-sm"></i>
+                            <i class="fa-solid fa-chevron-right text-xs md:text-sm"></i>
                         </button>
                     </div>
 
-                    <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="다음 페이지 전환까지 타이머">
+                    <div class="w-12 md:w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="다음 페이지 전환까지 타이머">
                         <div id="rotation-progress"></div>
                     </div>
-                    <span id="page-label" class="text-xs font-mono font-bold text-blue-400">PAGE 1 / 2</span>
+                    <span id="page-label" class="text-[10px] md:text-xs font-mono font-bold text-blue-400">PAGE 1 / 2</span>
+                </div>
+
+                <!-- 아이들 시청 횟수 표시 뱃지 (5회 제한) -->
+                <div id="watch-count-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+                    <i class="fa-solid fa-eye text-amber-400"></i>
+                    <span>시청 횟수: <strong id="current-watch-count" class="text-amber-200">0</strong> / 5회</span>
                 </div>
 
                 <!-- 디지털 시계 -->
-                <div class="text-right">
-                    <div id="clock-time" class="text-3xl font-bold tracking-wider text-gray-100 font-mono">12:00:00</div>
-                    <div id="clock-date" class="text-xs text-gray-400">2026. 01. 01 (목)</div>
+                <div class="text-right hidden sm:block">
+                    <div id="clock-time" class="text-xl md:text-3xl font-bold tracking-wider text-gray-100 font-mono">12:00:00</div>
+                    <div id="clock-date" class="text-[10px] md:text-xs text-gray-400">2026. 01. 01 (목)</div>
                 </div>
 
                 <!-- 유틸 버튼 -->
-                <div class="flex items-center space-x-2 bg-gray-800/60 p-2 rounded-2xl border border-gray-700/50 backdrop-blur-md">
-                    <button id="btn-toggle-rotate" title="자동 회전 일시정지/재개" class="w-12 h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
-                        <i id="rotate-icon" class="fa-solid fa-pause text-base"></i>
+                <div class="flex items-center space-x-1.5 md:space-x-2 bg-gray-800/60 p-1.5 md:p-2 rounded-2xl border border-gray-700/50 backdrop-blur-md">
+                    <button id="btn-toggle-rotate" title="자동 회전 일시정지/재개" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
+                        <i id="rotate-icon" class="fa-solid fa-pause text-xs md:text-base"></i>
                     </button>
-                    <button id="btn-refresh" title="데이터 새로고침" class="w-12 h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
-                        <i class="fa-solid fa-arrows-rotate text-base"></i>
+                    <button id="btn-refresh" title="데이터 새로고침" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
+                        <i class="fa-solid fa-arrows-rotate text-xs md:text-base"></i>
                     </button>
-                    <button id="btn-settings" title="구글 시트 연동 설정" class="w-12 h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
-                        <i class="fa-solid fa-gear text-base"></i>
+                    <button id="btn-settings" title="구글 시트 연동 설정" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
+                        <i class="fa-solid fa-gear text-xs md:text-base"></i>
                     </button>
-                    <button id="btn-fullscreen" title="전체화면" class="w-12 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-md active:scale-90 transition">
-                        <i class="fa-solid fa-expand text-base"></i>
+                    <button id="btn-fullscreen" title="전체화면" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-md active:scale-90 transition">
+                        <i class="fa-solid fa-expand text-xs md:text-base"></i>
                     </button>
                 </div>
             </div>
@@ -253,6 +285,38 @@
                 <span class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-blue-400"></i> 마우스 클릭, 화면 터치 또는 키보드를 누르면 영상이 종료되고 처음 화면으로 돌아갑니다.</span>
                 <span id="player-status-badge" class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-medium">재생 중 (터치 시 복귀)</span>
             </div>
+        </div>
+    </div>
+
+    <!-- 5회 시청 후 5분 브레이크타임 잠금 모달 -->
+    <div id="break-modal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center hidden opacity-0 transition-opacity duration-500 select-none">
+        <div class="text-center p-8 md:p-12 max-w-xl flex flex-col items-center">
+            <div class="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center text-amber-400 text-5xl md:text-6xl mb-6 shadow-2xl shadow-amber-500/30 break-pulse">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            
+            <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-3 tracking-tight">
+                눈 쉬는 시간! 👀🌿
+            </h2>
+            <p class="text-base md:text-lg text-gray-300 leading-relaxed mb-8">
+                영상을 <span class="text-amber-400 font-bold">5번</span> 모두 보았어요.<br>
+                눈 건강을 위해 <span class="text-blue-400 font-bold">5분 동안 먼 곳을 바라보며</span> 쉬어주세요!
+            </p>
+
+            <!-- 5분 카운트다운 타이머 -->
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl px-8 py-5 shadow-inner flex flex-col items-center gap-2 w-full max-w-sm">
+                <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">남은 휴식 시간</span>
+                <div id="break-timer-text" class="text-4xl md:text-5xl font-black font-mono tracking-wider text-amber-400">
+                    05:00
+                </div>
+                <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden mt-2">
+                    <div id="break-progress-bar" class="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-1000" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-6">
+                5분이 지나면 자동으로 잠금이 해제되고 다시 시청할 수 있습니다.
+            </p>
         </div>
     </div>
 
@@ -424,6 +488,70 @@
         let idleDimTimer = null;
         const IDLE_DIM_TIMEOUT_MS = 3 * 60 * 1000; // 3분 (180,000ms)
 
+        // [아이들 시청 제한] 5회 시청 시 5분 휴식 변수
+        const MAX_WATCH_COUNT = 5;
+        const BREAK_TIME_SECONDS = 5 * 60; // 5분 (300초)
+        let watchCount = 0;
+        let isBreakTimeActive = false;
+        let breakTimeRemaining = 0;
+        let breakIntervalTimer = null;
+
+        // 30초 구글 시트 자동 동기화 타이머
+        const AUTO_REFRESH_INTERVAL_MS = 30 * 1000; // 30초
+        let autoSyncTimer = null;
+
+        function updateWatchCountBadge() {
+            const countEl = document.getElementById('current-watch-count');
+            if (countEl) {
+                countEl.textContent = watchCount;
+            }
+        }
+
+        function triggerBreakTime() {
+            isBreakTimeActive = true;
+            breakTimeRemaining = BREAK_TIME_SECONDS;
+
+            const breakModal = document.getElementById('break-modal');
+            breakModal.classList.remove('hidden');
+            setTimeout(() => breakModal.classList.remove('opacity-0'), 10);
+
+            updateBreakTimerDisplay();
+
+            if (breakIntervalTimer) clearInterval(breakIntervalTimer);
+
+            breakIntervalTimer = setInterval(() => {
+                breakTimeRemaining--;
+                updateBreakTimerDisplay();
+
+                if (breakTimeRemaining <= 0) {
+                    clearInterval(breakIntervalTimer);
+                    endBreakTime();
+                }
+            }, 1000);
+        }
+
+        function updateBreakTimerDisplay() {
+            const minutes = String(Math.floor(breakTimeRemaining / 60)).padStart(2, '0');
+            const seconds = String(breakTimeRemaining % 60).padStart(2, '0');
+            document.getElementById('break-timer-text').textContent = `${minutes}:${seconds}`;
+
+            const percent = (breakTimeRemaining / BREAK_TIME_SECONDS) * 100;
+            document.getElementById('break-progress-bar').style.width = `${percent}%`;
+        }
+
+        function endBreakTime() {
+            isBreakTimeActive = false;
+            watchCount = 0;
+            updateWatchCountBadge();
+
+            const breakModal = document.getElementById('break-modal');
+            breakModal.classList.add('opacity-0');
+            setTimeout(() => {
+                breakModal.classList.add('hidden');
+                showToast("5분 휴식이 끝났습니다! 즐거운 시간 되세요.");
+            }, 500);
+        }
+
         function resetIdleTimer() {
             // 조작 감지 시 밝기 100% 원복
             if (document.body.classList.contains('dimmed')) {
@@ -446,19 +574,15 @@
         });
 
         const STORAGE_SHEET_KEY = 'kiosk_gsheet_csv_url';
+        // 기본 고정 구글 시트 CSV 링크
+        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQzk-_BL00NpjzmJnc6tXoXChKiZIz8eTdAr8PcyX-Agja1IfORXDcuJQ6AQEv1iKn5-asm1Efjfp_1/pub?gid=0&single=true&output=csv';
 
         /**
-         * 2. 화면 반응형 스케일 계산기 (1920x1080)
+         * 2. 화면 종횡비 및 해상도 동적 대응 (Fixed CSS Flex/Grid 기반)
          */
         function resizeKiosk() {
-            const viewport = document.getElementById('kiosk-viewport');
-            const targetWidth = 1920;
-            const targetHeight = 1080;
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            const scale = Math.min(windowWidth / targetWidth, windowHeight / targetHeight);
-            viewport.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            // 유동형 flex/grid 레이아웃을 채택하여 브라우저 리사이즈 시 자동으로 100vw x 100vh에 맞춰집니다.
+            // 필요 시 추가 연산 또는 orientation 변화에 따른 재배치가 브라우저 CSS 매크로(@media)에 의해 처리됩니다.
         }
 
         window.addEventListener('resize', resizeKiosk);
@@ -574,6 +698,7 @@
                     'modestbranding': 1,
                     'fs': 0,
                     'playsinline': 1,
+                    'cc_load_policy': 0, // 자막 기본 비활성화
                     'origin': currentOrigin
                 };
 
@@ -610,6 +735,12 @@
          * 6. 비디오 모달 열기 및 자동 재생 (재생 중에는 슬라이드 및 화면 터치 정지)
          */
         function openVideoModal(item) {
+            // 브레이크타임 중에는 영상 재생 불가
+            if (isBreakTimeActive) {
+                showToast("현재는 휴식 시간입니다. 잠시 눈을 쉬어주세요!");
+                return;
+            }
+
             isModalActive = true; // 슬라이드 회전 정지
 
             const modal = document.getElementById('video-modal');
@@ -690,6 +821,17 @@
                 // 처음 기본 화면(1페이지)으로 초기화
                 goToPage(0);
                 resetRotationTimer();
+
+                // [시청 횟수 증가 및 5회 도달 체크]
+                // 완주뿐 아니라 중간 터치 종료 시에도 1회 카운트
+                watchCount++;
+                updateWatchCountBadge();
+
+                if (watchCount >= MAX_WATCH_COUNT) {
+                    setTimeout(() => {
+                        triggerBreakTime();
+                    }, 400);
+                }
             }, 300);
         }
 
@@ -776,6 +918,11 @@
                 `;
 
                 card.addEventListener('click', () => {
+                    if (isBreakTimeActive) {
+                        showToast("현재는 눈 쉬는 시간입니다. 잠시 기다려주세요!");
+                        return;
+                    }
+
                     if (item.video_url) {
                         openVideoModal(item);
                     } else {
@@ -833,17 +980,19 @@
         /**
          * 10. 구글 시트 연동 (최대 16개 항목 수신)
          */
-        async function fetchGoogleSheetData(sheetCsvUrl) {
+        async function fetchGoogleSheetData(sheetCsvUrl, isSilent = false) {
             try {
-                showToast("구글 시트(16개 항목)를 동기화하는 중...");
+                if (!isSilent) {
+                    showToast("구글 시트(16개 항목)를 동기화하는 중...");
+                }
                 
                 let csvText = null;
                 let fetchMethod = '직접 연결';
 
-                // 1단계: 직접 통신
+                // 1단계: 직접 통신 (캐시 방지를 위한 타임스탬프)
                 try {
-                    const cacheBuster = `&_t=${Date.now()}`;
-                    const targetUrl = sheetCsvUrl.includes('?') ? `${sheetCsvUrl}${cacheBuster}` : `${sheetCsvUrl}?${cacheBuster}`;
+                    const cacheBuster = `_t=${Date.now()}`;
+                    const targetUrl = sheetCsvUrl.includes('?') ? `${sheetCsvUrl}&${cacheBuster}` : `${sheetCsvUrl}?${cacheBuster}`;
                     const res = await fetch(targetUrl, { cache: 'no-store' });
                     if (res.ok) {
                         csvText = await res.text();
@@ -870,7 +1019,7 @@
                 if (!csvText) {
                     try {
                         fetchMethod = '프록시 2 우회';
-                        const proxyUrl2 = `https://corsproxy.io/?url=${encodeURIComponent(sheetCsvUrl)}`;
+                        const proxyUrl2 = `https://corsproxy.io/?url=${encodeURIComponent(sheetCsvUrl)}&_t=${Date.now()}`;
                         const res = await fetch(proxyUrl2);
                         if (res.ok) {
                             csvText = await res.text();
@@ -889,8 +1038,10 @@
                 if (parsed.length > 0) {
                     currentMediaItems = parsed.slice(0, 16); // 최대 16개 수용
                     renderCards(currentMediaItems);
-                    showToast(`구글 시트 연동 성공 (${fetchMethod}, ${currentMediaItems.length}개 로드)`);
-                    document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Google Sheet 연결됨 (${fetchMethod})`;
+                    if (!isSilent) {
+                        showToast(`구글 시트 연동 성공 (${fetchMethod}, ${currentMediaItems.length}개 로드)`);
+                    }
+                    document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Google Sheet 실시간 연동 (30초 자동갱신)`;
                     localStorage.setItem('kiosk_cached_csv', csvText);
                 } else {
                     throw new Error("유효한 행이 없습니다.");
@@ -904,13 +1055,13 @@
                     if (parsedCached.length > 0) {
                         currentMediaItems = parsedCached.slice(0, 16);
                         renderCards(currentMediaItems);
-                        showToast("네트워크 실패: 이전 캐시 데이터로 표시합니다.");
+                        if (!isSilent) showToast("네트워크 실패: 이전 캐시 데이터로 표시합니다.");
                         document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> 오프라인 캐시 모드`;
                         return;
                     }
                 }
                 
-                showToast("시트 동기화 실패: 기본 데모 16개 항목으로 표시합니다.");
+                if (!isSilent) showToast("시트 동기화 실패: 기본 데모 16개 항목으로 표시합니다.");
                 renderCards(DEFAULT_MEDIA_ITEMS);
                 document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> 데모 모드 (16채널)`;
             }
@@ -938,17 +1089,24 @@
         window.onload = function() {
             resizeKiosk();
             resetIdleTimer(); // 3분 밝기 감소 타이머 초기 가동
-            const savedUrl = localStorage.getItem(STORAGE_SHEET_KEY);
-            if (savedUrl) {
-                document.getElementById('sheet-url-input').value = savedUrl;
-                fetchGoogleSheetData(savedUrl);
-            } else {
-                currentMediaItems = [...DEFAULT_MEDIA_ITEMS];
-                renderCards(currentMediaItems);
-            }
+            updateWatchCountBadge(); // 시청 횟수 배지 초기화
+            
+            // 저장된 커스텀 URL이 없으면 제공해주신 기본 시트 URL을 우선 사용
+            const activeUrl = localStorage.getItem(STORAGE_SHEET_KEY) || DEFAULT_SHEET_URL;
+            document.getElementById('sheet-url-input').value = activeUrl;
+            fetchGoogleSheetData(activeUrl);
 
             // 5초 자동 페이지 로테이션 루프 시작
             startRotationCycle();
+
+            // 30초 주기 백그라운드 자동 갱신 시작 (영상 시청 중에는 방해하지 않음)
+            if (autoSyncTimer) clearInterval(autoSyncTimer);
+            autoSyncTimer = setInterval(() => {
+                if (!isModalActive) {
+                    const currentUrl = localStorage.getItem(STORAGE_SHEET_KEY) || DEFAULT_SHEET_URL;
+                    fetchGoogleSheetData(currentUrl, true);
+                }
+            }, AUTO_REFRESH_INTERVAL_MS);
         };
 
         // 수동 페이지 버튼 클릭
@@ -1001,30 +1159,23 @@
                 fetchGoogleSheetData(url);
             } else {
                 localStorage.removeItem(STORAGE_SHEET_KEY);
-                currentMediaItems = [...DEFAULT_MEDIA_ITEMS];
-                renderCards(currentMediaItems);
-                showToast("기본 데모 16개 데이터로 복원되었습니다.");
+                fetchGoogleSheetData(DEFAULT_SHEET_URL);
+                showToast("기본 고정 시트로 복원되었습니다.");
             }
             settingsModal.classList.add('hidden');
         });
 
         document.getElementById('reset-default-btn').addEventListener('click', () => {
-            document.getElementById('sheet-url-input').value = "";
+            document.getElementById('sheet-url-input').value = DEFAULT_SHEET_URL;
             localStorage.removeItem(STORAGE_SHEET_KEY);
-            currentMediaItems = [...DEFAULT_MEDIA_ITEMS];
-            renderCards(currentMediaItems);
+            fetchGoogleSheetData(DEFAULT_SHEET_URL);
             settingsModal.classList.add('hidden');
-            showToast("기본 데모 상태로 초기화되었습니다.");
+            showToast("기본 고정 시트로 초기화되었습니다.");
         });
 
         document.getElementById('btn-refresh').addEventListener('click', () => {
-            const savedUrl = localStorage.getItem(STORAGE_SHEET_KEY);
-            if (savedUrl) {
-                fetchGoogleSheetData(savedUrl);
-            } else {
-                renderCards(DEFAULT_MEDIA_ITEMS);
-                showToast("화면이 새로고침되었습니다.");
-            }
+            const activeUrl = localStorage.getItem(STORAGE_SHEET_KEY) || DEFAULT_SHEET_URL;
+            fetchGoogleSheetData(activeUrl);
         });
     </script>
 </body>
