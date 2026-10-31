@@ -9,19 +9,19 @@
     <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-/* add */
-    <!-- 매니페스트 연결 -->
-<link rel="manifest" href="manifest.json">
 
-<!-- 서비스 워커 등록 스크립트 -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
-    });
-  }
-</script>
-/* add_end */
+    <!-- 매니페스트 연결 -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 서비스 워커 등록 스크립트 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
+        });
+      }
+    </script>
+
     
     <style>
         /* 터치 키오스크 기본 방어 스타일 */
