@@ -1,0 +1,18 @@
+{
+  "name": "나나자매와 띠진이",
+  "short_name": "키오스크",
+  "description": "스마트 미디어 키오스크 웹앱",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3845/3845868.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
