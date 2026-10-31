@@ -9,7 +9,6 @@
     <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-
     <!-- 매니페스트 연결 -->
     <link rel="manifest" href="manifest.json">
 
@@ -178,9 +177,6 @@
                 <div>
                     <h1 class="text-xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2 md:gap-3">
                         <span>나나자매와 띠진이</span>
-                        <span id="live-indicator" class="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-normal">
-                            <span class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 animate-pulse"></span> 실시간 연결됨
-                        </span>
                     </h1>
                     <p class="text-xs md:text-sm text-gray-400 mt-0.5 hidden sm:block">총 16개 채널 • 5초마다 페이지가 자동 회전합니다.</p>
                 </div>
@@ -207,12 +203,6 @@
                         <div id="rotation-progress"></div>
                     </div>
                     <span id="page-label" class="text-[10px] md:text-xs font-mono font-bold text-blue-400">PAGE 1 / 2</span>
-                </div>
-
-                <!-- 아이들 시청 횟수 표시 뱃지 (5회 제한) -->
-                <div id="watch-count-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                    <i class="fa-solid fa-eye text-amber-400"></i>
-                    <span>시청 횟수: <strong id="current-watch-count" class="text-amber-200">0</strong> / 5회</span>
                 </div>
 
                 <!-- 디지털 시계 -->
@@ -249,10 +239,19 @@
             </div>
         </main>
 
-        <!-- 하단 푸터 -->
-        <footer class="h-9 mt-2 px-4 flex justify-between items-center text-xs text-gray-500">
+        <!-- 하단 푸터 (시청 횟수 배지를 하단 중앙으로 배치) -->
+        <footer class="h-10 mt-2 px-4 flex justify-between items-center text-xs text-gray-500 relative">
             <div>시스템 상태: <span class="text-emerald-400">정상 가동 중 (16채널 듀얼 슬라이드)</span></div>
-            <div>Google Sheets CSV 동기화 • 영상 재생 중에는 자동 회전이 일시 중지됩니다.</div>
+            
+            <!-- 아이들 시청 횟수 표시 뱃지 (하단 중앙) -->
+            <div class="absolute left-1/2 transform -translate-x-1/2">
+                <div id="watch-count-badge" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold backdrop-blur-sm shadow-md">
+                    <i class="fa-solid fa-eye text-amber-400"></i>
+                    <span>시청 횟수: <strong id="current-watch-count" class="text-amber-200">0</strong> / 5회</span>
+                </div>
+            </div>
+
+            <div class="hidden md:block">Google Sheets CSV 연동 • 영상 재생 중에는 자동 회전이 일시 중지됩니다.</div>
         </footer>
     </div>
 
@@ -1041,7 +1040,6 @@
                     if (!isSilent) {
                         showToast(`구글 시트 연동 성공 (${fetchMethod}, ${currentMediaItems.length}개 로드)`);
                     }
-                    document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Google Sheet 실시간 연동 (30초 자동갱신)`;
                     localStorage.setItem('kiosk_cached_csv', csvText);
                 } else {
                     throw new Error("유효한 행이 없습니다.");
@@ -1056,14 +1054,12 @@
                         currentMediaItems = parsedCached.slice(0, 16);
                         renderCards(currentMediaItems);
                         if (!isSilent) showToast("네트워크 실패: 이전 캐시 데이터로 표시합니다.");
-                        document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> 오프라인 캐시 모드`;
                         return;
                     }
                 }
                 
                 if (!isSilent) showToast("시트 동기화 실패: 기본 데모 16개 항목으로 표시합니다.");
                 renderCards(DEFAULT_MEDIA_ITEMS);
-                document.getElementById('live-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> 데모 모드 (16채널)`;
             }
         }
 
