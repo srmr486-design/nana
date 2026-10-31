@@ -22,6 +22,35 @@
     </script>
     
     <style>
+        /* 테마별 CSS 변수 정의 */
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --bg-radial: radial-gradient(circle at 50% 20%, #151d2f 0%, #070a12 100%);
+        }
+
+        body[data-theme="emerald"] {
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --primary-glow: rgba(16, 185, 129, 0.5);
+            --bg-radial: radial-gradient(circle at 50% 20%, #064e3b 0%, #022c22 100%);
+        }
+
+        body[data-theme="purple"] {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --primary-glow: rgba(139, 92, 246, 0.5);
+            --bg-radial: radial-gradient(circle at 50% 20%, #3b0764 0%, #170326 100%);
+        }
+
+        body[data-theme="dark"] {
+            --primary: #64748b;
+            --primary-hover: #475569;
+            --primary-glow: rgba(100, 116, 139, 0.5);
+            --bg-radial: radial-gradient(circle at 50% 20%, #1e293b 0%, #020617 100%);
+        }
+
         /* 터치 키오스크 기본 방어 스타일 */
         * {
             -webkit-touch-callout: none;
@@ -49,7 +78,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            background: radial-gradient(circle at 50% 20%, #151d2f 0%, #070a12 100%);
+            background: var(--bg-radial);
             transition: filter 1.2s ease-in-out;
         }
 
@@ -61,14 +90,14 @@
         /* 스마트폰 화면 넘김 슬라이더 트랙 */
         #slider-track {
             display: flex;
-            width: 200%; /* 2개 페이지 (각각 100% 폭) */
+            width: 200%; /* JS에서 동적 설정: totalPages * 100% */
             height: 100%;
             transition: transform 0.65s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         /* 기본 가로 화면 (16:9 / 1920x1080 등): 4열 x 2행 */
         .page-grid {
-            width: 50%;
+            /* width는 JS에서 100 / totalPages % 로 부여 */
             height: 100%;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -113,16 +142,23 @@
         }
         .page-dot.active {
             width: 2.2rem;
-            background-color: #3b82f6;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+            background-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow);
         }
 
-        /* 5초 타이머 프로그레스 게이지 */
+        /* 타이머 프로그레스 게이지 */
         #rotation-progress {
             width: 0%;
             height: 100%;
-            background: #3b82f6;
+            background: var(--primary);
             transition: width 0.1s linear;
+        }
+
+        .theme-bg-primary {
+            background-color: var(--primary) !important;
+        }
+        .theme-text-primary {
+            color: var(--primary) !important;
         }
 
         /* 5분 브레이크타임 오버레이 펄스 애니메이션 */
@@ -170,14 +206,14 @@
         <!-- 헤더 영역 -->
         <header class="flex justify-between items-center h-16 md:h-20 px-2 md:px-4 mb-2 md:mb-3 select-none flex-shrink-0">
             <div class="flex items-center space-x-3 md:space-x-4">
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+                <div class="w-10 h-10 md:w-12 md:h-12 theme-bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-black/40 flex-shrink-0">
                     <i class="fa-solid fa-play text-xl md:text-2xl text-white"></i>
                 </div>
                 <div>
                     <h1 class="text-xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2 md:gap-3">
-                        <span>나나자매와 띠진이</span>
+                        <span id="app-title-text">나나자매와 띠진이</span>
                     </h1>
-                    <p class="text-xs md:text-sm text-gray-400 mt-0.5 hidden sm:block">총 16개 채널 • 5초마다 페이지가 자동 회전합니다.</p>
+                    <p id="app-subtitle-text" class="text-xs md:text-sm text-gray-400 mt-0.5 hidden sm:block">총 16개 채널 • 5초마다 페이지가 자동 회전합니다.</p>
                 </div>
             </div>
 
@@ -189,9 +225,8 @@
                         <button id="btn-prev-page" class="text-gray-400 hover:text-white px-1 active:scale-90 transition">
                             <i class="fa-solid fa-chevron-left text-xs md:text-sm"></i>
                         </button>
-                        <div class="flex items-center gap-1.5 md:gap-2">
-                            <div id="dot-page-0" class="page-dot active w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-blue-500"></div>
-                            <div id="dot-page-1" class="page-dot w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-gray-600"></div>
+                        <div id="dots-container" class="flex items-center gap-1.5 md:gap-2">
+                            <!-- 동적 닷 생성 -->
                         </div>
                         <button id="btn-next-page" class="text-gray-400 hover:text-white px-1 active:scale-90 transition">
                             <i class="fa-solid fa-chevron-right text-xs md:text-sm"></i>
@@ -201,7 +236,7 @@
                     <div class="w-12 md:w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="다음 페이지 전환까지 타이머">
                         <div id="rotation-progress"></div>
                     </div>
-                    <span id="page-label" class="text-[10px] md:text-xs font-mono font-bold text-blue-400">PAGE 1 / 2</span>
+                    <span id="page-label" class="text-[10px] md:text-xs font-mono font-bold theme-text-primary">PAGE 1 / 2</span>
                 </div>
 
                 <!-- 디지털 시계 -->
@@ -221,7 +256,7 @@
                     <button id="btn-settings" title="구글 시트 연동 설정" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-gray-700/60 hover:bg-gray-600 text-gray-200 flex items-center justify-center active:scale-90 transition">
                         <i class="fa-solid fa-gear text-xs md:text-base"></i>
                     </button>
-                    <button id="btn-fullscreen" title="전체화면" class="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-md active:scale-90 transition">
+                    <button id="btn-fullscreen" title="전체화면" class="w-9 h-9 md:w-12 md:h-12 rounded-xl theme-bg-primary hover:opacity-90 text-white flex items-center justify-center shadow-md active:scale-90 transition">
                         <i class="fa-solid fa-expand text-xs md:text-base"></i>
                     </button>
                 </div>
@@ -231,22 +266,19 @@
         <!-- 슬라이더 영역 (모바일 화면 넘김 효과) -->
         <main class="flex-1 w-full overflow-hidden relative rounded-2xl">
             <div id="slider-track">
-                <!-- 1페이지 (1~8번 카드) -->
-                <div id="page-1" class="page-grid"></div>
-                <!-- 2페이지 (9~16번 카드) -->
-                <div id="page-2" class="page-grid"></div>
+                <!-- 페이지 그리드들이 JS에서 동적으로 생성됩니다 -->
             </div>
         </main>
 
         <!-- 하단 푸터 (시청 횟수 배지를 하단 중앙으로 배치) -->
         <footer class="h-10 mt-2 px-4 flex justify-between items-center text-xs text-gray-500 relative">
-            <div>시스템 상태: <span class="text-emerald-400">정상 가동 중 (16채널 듀얼 슬라이드)</span></div>
+            <div>시스템 상태: <span class="text-emerald-400">정상 가동 중 (<span id="footer-status-text">16채널 듀얼 슬라이드</span>)</span></div>
             
             <!-- 아이들 시청 횟수 표시 뱃지 (하단 중앙) -->
             <div class="absolute left-1/2 transform -translate-x-1/2">
                 <div id="watch-count-badge" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold backdrop-blur-sm shadow-md">
                     <i class="fa-solid fa-eye text-amber-400"></i>
-                    <span>시청 횟수: <strong id="current-watch-count" class="text-amber-200">0</strong> / 5회</span>
+                    <span>시청 횟수: <strong id="current-watch-count" class="text-amber-200">0</strong> / <span id="max-watch-display">5</span>회</span>
                 </div>
             </div>
 
@@ -264,7 +296,7 @@
                     <h2 id="modal-title" class="text-xl font-bold text-white drop-shadow-md truncate max-w-2xl">영상 제목</h2>
                 </div>
                 <div class="px-4 py-1.5 rounded-full bg-black/60 border border-white/10 text-xs text-gray-300 flex items-center gap-2">
-                    <i class="fa-solid fa-arrow-rotate-left text-blue-400"></i> 화면 터치 시 처음 화면으로 복귀
+                    <i class="fa-solid fa-arrow-rotate-left theme-text-primary"></i> 화면 터치 시 처음 화면으로 복귀
                 </div>
             </div>
 
@@ -280,13 +312,13 @@
 
             <!-- 하단 안내 바 -->
             <div class="h-12 bg-gray-900/90 border-t border-gray-800 px-6 flex justify-between items-center text-xs text-gray-400 pointer-events-none">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-blue-400"></i> 마우스 클릭, 화면 터치 또는 키보드를 누르면 영상이 종료되고 처음 화면으로 돌아갑니다.</span>
-                <span id="player-status-badge" class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-medium">재생 중 (터치 시 복귀)</span>
+                <span class="flex items-center gap-2"><i class="fa-solid fa-circle-info theme-text-primary"></i> 마우스 클릭, 화면 터치 또는 키보드를 누르면 영상이 종료되고 처음 화면으로 돌아갑니다.</span>
+                <span id="player-status-badge" class="px-2.5 py-1 rounded bg-blue-500/20 theme-text-primary border border-blue-500/30 font-medium">재생 중 (터치 시 복귀)</span>
             </div>
         </div>
     </div>
 
-    <!-- 5회 시청 후 5분 브레이크타임 잠금 모달 -->
+    <!-- 시청 제한 브레이크타임 잠금 모달 -->
     <div id="break-modal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center hidden opacity-0 transition-opacity duration-500 select-none">
         <div class="text-center p-8 md:p-12 max-w-xl flex flex-col items-center">
             <div class="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center text-amber-400 text-5xl md:text-6xl mb-6 shadow-2xl shadow-amber-500/30 break-pulse">
@@ -297,11 +329,11 @@
                 눈 쉬는 시간! 👀🌿
             </h2>
             <p class="text-base md:text-lg text-gray-300 leading-relaxed mb-8">
-                영상을 <span class="text-amber-400 font-bold">5번</span> 모두 보았어요.<br>
-                눈 건강을 위해 <span class="text-blue-400 font-bold">5분 동안 먼 곳을 바라보며</span> 쉬어주세요!
+                영상을 <span id="break-limit-display" class="text-amber-400 font-bold">5번</span> 모두 보았어요.<br>
+                눈 건강을 위해 <span id="break-minutes-display" class="theme-text-primary font-bold">5분 동안 먼 곳을 바라보며</span> 쉬어주세요!
             </p>
 
-            <!-- 5분 카운트다운 타이머 -->
+            <!-- 카운트다운 타이머 -->
             <div class="bg-gray-900/90 border border-gray-800 rounded-3xl px-8 py-5 shadow-inner flex flex-col items-center gap-2 w-full max-w-sm">
                 <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">남은 휴식 시간</span>
                 <div id="break-timer-text" class="text-4xl md:text-5xl font-black font-mono tracking-wider text-amber-400">
@@ -313,46 +345,146 @@
             </div>
 
             <p class="text-xs text-gray-500 mt-6">
-                5분이 지나면 자동으로 잠금이 해제되고 다시 시청할 수 있습니다.
+                시간이 지나면 자동으로 잠금이 해제되고 다시 시청할 수 있습니다.
             </p>
         </div>
     </div>
 
-    <!-- 구글 시트 설정 모달 -->
-    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden">
-        <div class="bg-gray-900 border border-gray-800 rounded-3xl w-[700px] max-w-[90vw] p-8 shadow-2xl">
+    <!-- 구글 시트 및 관리자 설정 모달 -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl w-[760px] max-w-[94vw] max-h-[90vh] overflow-y-auto p-6 md:p-8 shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-gray-800 mb-6">
-                <h3 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="fa-brands fa-google-drive text-emerald-400"></i> Google 시트 설정 (최대 16개 항목)
+                <h3 class="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-sliders theme-text-primary"></i> 시스템 및 구글 시트 설정
                 </h3>
                 <button id="settings-close-btn" class="text-gray-400 hover:text-white text-2xl">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="space-y-5">
+            <div class="space-y-6">
+                <!-- 구글 시트 URL 설정 -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-300 mb-2">Google 시트 게시된 CSV 링크 (Published CSV URL)</label>
                     <input id="sheet-url-input" type="text" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm font-mono" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-                    <p class="text-xs text-gray-400 mt-2 leading-relaxed">
-                        * 구글 시트 메뉴: <span class="text-gray-200">파일 &gt; 공유 &gt; 웹에 게시 &gt; 형식: '쉼표로 구분된 값(.csv)'</span> 선택 후 링크를 입력하세요.<br>
-                        * 시트 헤더: <code class="text-blue-400">title, video_url, thumbnail_url, desc</code> 순서로 총 16행을 작성하시면 8개씩 2페이지로 자동 분할됩니다.
+                    <p class="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                        * 구글 시트: <span class="text-gray-200">파일 &gt; 공유 &gt; 웹에 게시 &gt; 형식: '쉼표로 구분된 값(.csv)'</span><br>
+                        * 헤더: <code class="theme-text-primary">title, video_url, thumbnail_url, desc</code> (설정된 페이지 수에 맞게 자동 분할)
                     </p>
                 </div>
 
-                <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 text-xs text-gray-300 space-y-1.5">
-                    <div class="font-bold text-blue-400 mb-1">지원되는 영상 및 자동 기능:</div>
-                    <div>1. YouTube 링크: 일반 URL, 공유 단축 URL, 쇼츠 링크 모두 지원 (오류 153 방지 적용)</div>
-                    <div>2. 일반 비디오 파일: mp4, webm 등의 직접 파일 링크 지원</div>
-                    <div>3. 5초 자동 페이지 전환: 마우스/터치 시 타이머가 리셋되며, 영상 재생 중에는 회전이 정지됩니다.</div>
+                <!-- 관리자 메뉴 인증 영역 -->
+                <div class="p-4 rounded-2xl bg-gray-800/40 border border-gray-700/60">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-amber-400 text-lg"></i>
+                            <span class="text-sm font-bold text-white">관리자 전용 설정 메뉴</span>
+                        </div>
+                        <span id="admin-badge" class="text-xs px-2.5 py-1 rounded-full bg-gray-700 text-gray-400">인증 필요</span>
+                    </div>
+
+                    <!-- 비밀번호 입력 폼 -->
+                    <div id="admin-auth-box" class="flex gap-2">
+                        <input id="admin-pwd-input" type="password" placeholder="관리자 비밀번호 입력" class="flex-1 px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm focus:outline-none focus:border-blue-500">
+                        <button type="button" id="btn-admin-login" class="px-5 py-2.5 rounded-xl theme-bg-primary hover:opacity-90 text-white text-sm font-medium transition active:scale-95">
+                            관리자 인증
+                        </button>
+                    </div>
+
+                    <!-- 관리자 메뉴 본체 (인증 성공 시 노출) -->
+                    <div id="admin-controls" class="hidden mt-5 pt-5 border-t border-gray-700/70 space-y-4">
+                        <!-- 1. 타이틀 변경 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-300 mb-1">앱 메인 타이틀 (상단 제목)</label>
+                            <input id="cfg-app-title" type="text" class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white text-sm">
+                        </div>
+
+                        <!-- 2. 기본 페이지 수 설정 (1 ~ 5페이지, 최대 40개) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-1">
+                                    운용 페이지 수: <span id="val-page-count" class="theme-text-primary font-bold">2페이지 (16채널)</span>
+                                </label>
+                                <input id="cfg-page-count" type="range" min="1" max="5" step="1" value="2" class="w-full accent-blue-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                    <span>1P (8개)</span>
+                                    <span>2P (16개)</span>
+                                    <span>3P (24개)</span>
+                                    <span>4P (32개)</span>
+                                    <span>5P (40개)</span>
+                                </div>
+                            </div>
+
+                            <!-- 3. 페이지 전환 시간 (5초 ~ 20초) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-1">
+                                    페이지 자동 전환 시간: <span id="val-rotate-interval" class="theme-text-primary font-bold">5초</span>
+                                </label>
+                                <input id="cfg-rotate-interval" type="range" min="5" max="20" step="1" value="5" class="w-full accent-blue-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                    <span>5초</span>
+                                    <span>10초</span>
+                                    <span>15초</span>
+                                    <span>20초</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. 시청 횟수 및 휴식 시간 설정 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-1">
+                                    시청 제한 횟수: <span id="val-max-watch" class="text-amber-400 font-bold">5회</span>
+                                </label>
+                                <input id="cfg-max-watch" type="range" min="3" max="10" step="1" value="5" class="w-full accent-amber-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                    <span>3회</span>
+                                    <span>5회 (기본)</span>
+                                    <span>10회</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-1">
+                                    휴식 시간 (브레이크타임): <span id="val-break-time" class="text-amber-400 font-bold">5분</span>
+                                </label>
+                                <input id="cfg-break-time" type="range" min="3" max="60" step="1" value="5" class="w-full accent-amber-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                    <span>3분</span>
+                                    <span>5분 (기본)</span>
+                                    <span>30분</span>
+                                    <span>60분</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. 색상 테마 선택 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-300 mb-2">웹앱 컬러 테마 선택</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button type="button" data-set-theme="default" class="theme-choice-btn py-2 px-3 rounded-xl border border-blue-500/80 bg-blue-900/30 text-blue-400 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span> 오션 블루
+                                </button>
+                                <button type="button" data-set-theme="emerald" class="theme-choice-btn py-2 px-3 rounded-xl border border-gray-700 bg-gray-800 text-gray-300 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+                                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span> 에메랄드
+                                </button>
+                                <button type="button" data-set-theme="purple" class="theme-choice-btn py-2 px-3 rounded-xl border border-gray-700 bg-gray-800 text-gray-300 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+                                    <span class="w-3 h-3 rounded-full bg-purple-500"></span> 사이버 퍼플
+                                </button>
+                                <button type="button" data-set-theme="dark" class="theme-choice-btn py-2 px-3 rounded-xl border border-gray-700 bg-gray-800 text-gray-300 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+                                    <span class="w-3 h-3 rounded-full bg-slate-400"></span> 모던 다크
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-800">
-                    <button id="reset-default-btn" class="px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-sm transition">
-                        기본 데모 데이터로 복원
+                <div class="flex justify-end space-x-3 pt-3 border-t border-gray-800">
+                    <button type="button" id="reset-default-btn" class="px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-sm transition">
+                        기본 설정 복원
                     </button>
-                    <button id="save-settings-btn" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-500/25 transition">
-                        저장 및 불러오기
+                    <button type="button" id="save-settings-btn" class="px-6 py-2.5 rounded-xl theme-bg-primary hover:opacity-90 text-white font-medium text-sm shadow-lg shadow-black/30 transition">
+                        저장 및 적용
                     </button>
                 </div>
             </div>
@@ -364,140 +496,129 @@
 
     <script>
         /**
-         * 1. 기본 16개 데모 데이터 (1~8번: 1페이지, 9~16번: 2페이지)
+         * 1. 관리자 설정 키 및 상태 관리
          */
-        const DEFAULT_MEDIA_ITEMS = [
-            // Page 1 (1 ~ 8)
-            {
-                title: "자연 다큐멘터리: 신비로운 해양 생태계",
-                desc: "초고화질 4K 바다 탐험",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "라즈베리파이와 함께하는 스마트 팩토리",
-                desc: "공정 자동화 및 IoT 관제 시스템",
-                video_url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
-                thumbnail_url: ""
-            },
-            {
-                title: "도심 야경 타임랩스 투어",
-                desc: "화려한 메트로폴리스의 불빛",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "미래형 스마트 모빌리티 소개",
-                desc: "친환경 전기차 및 자율주행 혁신",
-                video_url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-                thumbnail_url: ""
-            },
-            {
-                title: "초고속 인터랙티브 키오스크 안내",
-                desc: "사용자 중심의 차세대 UI/UX 솔루션",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "우주 탐사 아카이브: 화성 착륙",
-                desc: "심우주 탐사와 로버 탐험 미션",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "로보틱스 & AI 인공지능 쇼케이스",
-                desc: "인간과 협력하는 차세대 산업용 로봇",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "미디어 아트 & 디지털 인스톨레이션",
-                desc: "공간을 채우는 사운드와 비주얼",
-                video_url: "https://www.youtube.com/watch?v=ysz5S6PUM-U",
-                thumbnail_url: ""
-            },
+        const STORAGE_CONFIG_KEY = 'kiosk_admin_config_v2';
+        const STORAGE_SHEET_KEY = 'kiosk_gsheet_csv_url';
+        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQzk-_BL00NpjzmJnc6tXoXChKiZIz8eTdAr8PcyX-Agja1IfORXDcuJQ6AQEv1iKn5-asm1Efjfp_1/pub?gid=0&single=true&output=csv';
+        const ADMIN_PASSWORD = "dbtjddyd";
 
-            // Page 2 (9 ~ 16)
-            {
-                title: "친환경 그린 스마트 시티 비전",
-                desc: "지속 가능한 탄소중립 도시 설계",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "우주 망원경과 은하의 비밀",
-                desc: "제임스 웹 망원경이 포착한 신비",
-                video_url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
-                thumbnail_url: ""
-            },
-            {
-                title: "차세대 수소 에너지 기술",
-                desc: "깨끗한 미래 에너지 솔루션",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "클라우드 컴퓨팅과 데이터 센터",
-                desc: "초연결 사회를 지탱하는 디지털 인프라",
-                video_url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-                thumbnail_url: ""
-            },
-            {
-                title: "스마트 헬스케어 & 원격 진료",
-                desc: "웨어러블 센서와 AI 건강 관리",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackSeeTheWorld.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "사이버 보안과 데이터 프라이버시",
-                desc: "안전한 디지털 환경을 위한 보안 전략",
-                video_url: "https://www.youtube.com/watch?v=ysz5S6PUM-U",
-                thumbnail_url: ""
-            },
-            {
-                title: "가상현실(VR)과 메타버스 체험",
-                desc: "시공간을 초월한 몰입형 콘텐츠",
-                video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                thumbnail_url: "https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?auto=format&fit=crop&w=800&q=80"
-            },
-            {
-                title: "미래 교육과 스마트 클래스룸",
-                desc: "에듀테크 기반의 새로운 학습 경험",
-                video_url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
-                thumbnail_url: ""
+        // 시스템 기본 설정값 (관리자 메뉴에서 조절 가능)
+        const appConfig = {
+            appTitle: "나나자매와 띠진이",
+            totalPages: 2,         // 1 ~ 5
+            rotateIntervalSec: 5,  // 5 ~ 20초
+            maxWatchCount: 5,      // 3 ~ 10회
+            breakMinutes: 5,       // 3 ~ 60분
+            theme: "default"       // default | emerald | purple | dark
+        };
+
+        function loadSavedConfig() {
+            try {
+                const saved = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(appConfig, parsed);
+                }
+            } catch (e) {
+                console.warn("설정 로드 실패:", e);
             }
-        ];
+        }
+
+        function saveConfig() {
+            localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(appConfig));
+        }
+
+        loadSavedConfig();
 
         let currentMediaItems = [];
         let ytPlayer = null;
         let isYtReady = false;
         let activePlayerType = null; // 'html' | 'youtube'
         let isClosing = false; // 중복 닫기 및 중복 카운트 방지 플래그
+        let isAdminAuthenticated = false;
 
-        // 5초 로테이션 관련 변수
-        let currentPage = 0; // 0: 1페이지(1~8), 1: 2페이지(9~16)
-        let rotationTimer = null;
+        // 로테이션 관련 변수
+        let currentPage = 0;
         let rotationProgressTimer = null;
         let isRotationPaused = false;
         let isModalActive = false;
         let progressPercent = 0;
-        const ROTATE_INTERVAL_MS = 5000; // 5초
 
         // 3분 미조작 시 밝기 절반(50%) 감소 타이머
         let idleDimTimer = null;
-        const IDLE_DIM_TIMEOUT_MS = 3 * 60 * 1000; // 3분 (180,000ms)
+        const IDLE_DIM_TIMEOUT_MS = 3 * 60 * 1000;
 
-        // [아이들 시청 제한] 5회 시청 시 5분 휴식 변수
-        const MAX_WATCH_COUNT = 5;
-        const BREAK_TIME_SECONDS = 5 * 60; // 5분 (300초)
+        // 시청 제한 브레이크타임 변수
         let watchCount = 0;
         let isBreakTimeActive = false;
         let breakTimeRemaining = 0;
         let breakIntervalTimer = null;
 
         // 30초 구글 시트 자동 동기화 타이머
-        const AUTO_REFRESH_INTERVAL_MS = 30 * 1000; // 30초
+        const AUTO_REFRESH_INTERVAL_MS = 30 * 1000;
         let autoSyncTimer = null;
+
+        /**
+         * 2. UI 스타일 및 테마 적용
+         */
+        function applyAppConfig() {
+            // 타이틀 적용
+            document.getElementById('app-title-text').textContent = appConfig.appTitle;
+            document.title = `${appConfig.appTitle} - 스마트 키오스크`;
+
+            // 테마 적용
+            if (appConfig.theme === 'default') {
+                document.body.removeAttribute('data-theme');
+            } else {
+                document.body.setAttribute('data-theme', appConfig.theme);
+            }
+
+            // 하단 시청 제한 디스플레이 갱신
+            document.getElementById('max-watch-display').textContent = appConfig.maxWatchCount;
+            document.getElementById('break-limit-display').textContent = `${appConfig.maxWatchCount}번`;
+            document.getElementById('break-minutes-display').textContent = `${appConfig.breakMinutes}분 동안 먼 곳을 바라보며`;
+
+            // 서브타이틀 갱신
+            document.getElementById('app-subtitle-text').textContent = 
+                `총 ${appConfig.totalPages * 8}개 채널 • ${appConfig.rotateIntervalSec}초마다 페이지가 자동 회전합니다.`;
+            document.getElementById('footer-status-text').textContent = 
+                `${appConfig.totalPages * 8}채널 (${appConfig.totalPages}페이지 슬라이드)`;
+
+            // 인디케이터 점 및 슬라이더 컨테이너 구조 빌드
+            buildSliderStructure();
+        }
+
+        function buildSliderStructure() {
+            const track = document.getElementById('slider-track');
+            const dotsContainer = document.getElementById('dots-container');
+
+            track.innerHTML = '';
+            dotsContainer.innerHTML = '';
+
+            track.style.width = `${appConfig.totalPages * 100}%`;
+
+            for (let p = 0; p < appConfig.totalPages; p++) {
+                // 페이지 그리드 생성
+                const pageGrid = document.createElement('div');
+                pageGrid.id = `page-${p + 1}`;
+                pageGrid.className = 'page-grid';
+                pageGrid.style.width = `${100 / appConfig.totalPages}%`;
+                track.appendChild(pageGrid);
+
+                // 인디케이터 닷 생성
+                const dot = document.createElement('div');
+                dot.id = `dot-page-${p}`;
+                dot.className = `page-dot w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${p === 0 ? 'active theme-bg-primary' : 'bg-gray-600'} cursor-pointer`;
+                dot.addEventListener('click', () => goToPage(p));
+                dotsContainer.appendChild(dot);
+            }
+
+            if (currentPage >= appConfig.totalPages) {
+                currentPage = 0;
+            }
+            goToPage(currentPage);
+        }
 
         function updateWatchCountBadge() {
             const countEl = document.getElementById('current-watch-count');
@@ -508,7 +629,7 @@
 
         function triggerBreakTime() {
             isBreakTimeActive = true;
-            breakTimeRemaining = BREAK_TIME_SECONDS;
+            breakTimeRemaining = appConfig.breakMinutes * 60;
 
             const breakModal = document.getElementById('break-modal');
             breakModal.classList.remove('hidden');
@@ -534,7 +655,8 @@
             const seconds = String(breakTimeRemaining % 60).padStart(2, '0');
             document.getElementById('break-timer-text').textContent = `${minutes}:${seconds}`;
 
-            const percent = (breakTimeRemaining / BREAK_TIME_SECONDS) * 100;
+            const totalSeconds = appConfig.breakMinutes * 60;
+            const percent = (breakTimeRemaining / totalSeconds) * 100;
             document.getElementById('break-progress-bar').style.width = `${percent}%`;
         }
 
@@ -547,12 +669,11 @@
             breakModal.classList.add('opacity-0');
             setTimeout(() => {
                 breakModal.classList.add('hidden');
-                showToast("5분 휴식이 끝났습니다! 즐거운 시간 되세요.");
+                showToast("휴식이 끝났습니다! 즐거운 시간 되세요.");
             }, 500);
         }
 
         function resetIdleTimer() {
-            // 조작 감지 시 밝기 100% 원복
             if (document.body.classList.contains('dimmed')) {
                 document.body.classList.remove('dimmed');
             }
@@ -561,31 +682,14 @@
                 clearTimeout(idleDimTimer);
             }
 
-            // 3분간 입력이 없으면 밝기를 절반으로 낮춤
             idleDimTimer = setTimeout(() => {
                 document.body.classList.add('dimmed');
             }, IDLE_DIM_TIMEOUT_MS);
         }
 
-        // 터치, 마우스 이동, 클릭, 키 입력 등 사용자 활동 감지 리스너 등록
         ['pointerdown', 'mousemove', 'touchstart', 'keydown', 'scroll'].forEach(evt => {
             window.addEventListener(evt, resetIdleTimer, { passive: true });
         });
-
-        const STORAGE_SHEET_KEY = 'kiosk_gsheet_csv_url';
-        // 기본 고정 구글 시트 CSV 링크
-        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQzk-_BL00NpjzmJnc6tXoXChKiZIz8eTdAr8PcyX-Agja1IfORXDcuJQ6AQEv1iKn5-asm1Efjfp_1/pub?gid=0&single=true&output=csv';
-
-        /**
-         * 2. 화면 종횡비 및 해상도 동적 대응 (Fixed CSS Flex/Grid 기반)
-         */
-        function resizeKiosk() {
-            // 유동형 flex/grid 레이아웃을 채택하여 브라우저 리사이즈 시 자동으로 100vw x 100vh에 맞춰집니다.
-            // 필요 시 추가 연산 또는 orientation 변화에 따른 재배치가 브라우저 CSS 매크로(@media)에 의해 처리됩니다.
-        }
-
-        window.addEventListener('resize', resizeKiosk);
-        window.addEventListener('orientationchange', resizeKiosk);
 
         /**
          * 3. 시계 업데이트
@@ -608,36 +712,42 @@
         updateClock();
 
         /**
-         * 4. 페이지 전환 및 5초 로테이션 매니저
+         * 4. 페이지 전환 및 동적 로테이션 매니저
          */
         function goToPage(pageIndex) {
             currentPage = pageIndex;
             const sliderTrack = document.getElementById('slider-track');
             
-            // 스마트폰 스와이프 효과 (-0% 또는 -50%)
-            sliderTrack.style.transform = `translateX(-${currentPage * 50}%)`;
+            // 스마트폰 스와이프 효과 (-0%, -100/totalPages%, ...)
+            const percentShift = (currentPage * (100 / appConfig.totalPages));
+            sliderTrack.style.transform = `translateX(-${percentShift}%)`;
 
-            // 인디케이터 업데이트
-            document.getElementById('dot-page-0').classList.toggle('active', currentPage === 0);
-            document.getElementById('dot-page-0').classList.toggle('bg-blue-500', currentPage === 0);
-            document.getElementById('dot-page-0').classList.toggle('bg-gray-600', currentPage !== 0);
+            // 모든 닷 상태 갱신
+            for (let p = 0; p < appConfig.totalPages; p++) {
+                const dot = document.getElementById(`dot-page-${p}`);
+                if (dot) {
+                    if (p === currentPage) {
+                        dot.classList.add('active', 'theme-bg-primary');
+                        dot.classList.remove('bg-gray-600');
+                    } else {
+                        dot.classList.remove('active', 'theme-bg-primary');
+                        dot.classList.add('bg-gray-600');
+                    }
+                }
+            }
 
-            document.getElementById('dot-page-1').classList.toggle('active', currentPage === 1);
-            document.getElementById('dot-page-1').classList.toggle('bg-blue-500', currentPage === 1);
-            document.getElementById('dot-page-1').classList.toggle('bg-gray-600', currentPage !== 1);
-
-            document.getElementById('page-label').textContent = `PAGE ${currentPage + 1} / 2`;
-
-            // 페이지 변경 시 타이머 리셋
+            document.getElementById('page-label').textContent = `PAGE ${currentPage + 1} / ${appConfig.totalPages}`;
             resetRotationTimer();
         }
 
         function toggleNextPage() {
-            goToPage(currentPage === 0 ? 1 : 0);
+            const next = (currentPage + 1) % appConfig.totalPages;
+            goToPage(next);
         }
 
         function togglePrevPage() {
-            goToPage(currentPage === 1 ? 0 : 1);
+            const prev = (currentPage - 1 + appConfig.totalPages) % appConfig.totalPages;
+            goToPage(prev);
         }
 
         function resetRotationTimer() {
@@ -645,17 +755,16 @@
             document.getElementById('rotation-progress').style.width = '0%';
         }
 
-        // 100ms마다 타이머 프로그레스 바를 채우고, 5초(100%) 도달 시 다음 페이지로 슬라이드
         function startRotationCycle() {
             if (rotationProgressTimer) clearInterval(rotationProgressTimer);
 
+            const intervalMs = appConfig.rotateIntervalSec * 1000;
             rotationProgressTimer = setInterval(() => {
-                // 영상 모달이 열려있거나 일시정지 상태일 경우 회전 멈춤
                 if (isModalActive || isRotationPaused) {
                     return;
                 }
 
-                progressPercent += (100 / (ROTATE_INTERVAL_MS / 100));
+                progressPercent += (100 / (intervalMs / 100));
                 if (progressPercent >= 100) {
                     toggleNextPage();
                     progressPercent = 0;
@@ -665,7 +774,7 @@
         }
 
         /**
-         * 5. 유튜브 URL 파싱 및 오류 153 방지 플레이어 생성
+         * 5. 유튜브 URL 파싱 및 자막 절대 비활성화 플레이어
          */
         function extractYouTubeId(url) {
             if (!url) return null;
@@ -684,25 +793,61 @@
 
         function setupYouTubePlayer(videoId) {
             return new Promise((resolve) => {
-                // 로컬 file:/// 실행 시 YouTube 오류 153 방지를 위한 origin 지정
                 const currentOrigin = (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')
                     ? 'https://www.youtube.com'
                     : window.location.origin;
 
+                // 자막 완전 비활성화 매개변수 적용: cc_load_policy=0, cc_lang_pref=""
                 const playerVars = {
                     'autoplay': 1,
-                    'controls': 0, // 재생 중 컨트롤 조작 방지
-                    'disablekb': 1, // 키보드 조작 방지
+                    'controls': 0,
+                    'disablekb': 1,
                     'rel': 0,
                     'modestbranding': 1,
                     'fs': 0,
                     'playsinline': 1,
-                    'cc_load_policy': 0, // 자막 기본 비활성화
+                    'cc_load_policy': 0,      // 자막 강제 끄기
+                    'cc_lang_pref': 'none',    // 언어 기본값 제거
+                    'iv_load_policy': 3,       // 비디오 주석 끄기
                     'origin': currentOrigin
                 };
 
+                const secureIframePermissions = () => {
+                    const iframe = document.querySelector('#youtube-player iframe') || document.querySelector('iframe#youtube-player');
+                    if (iframe) {
+                        // 불필요한 마이크/카메라 권한 차단하고 재생에 필요한 권한만 명시
+                        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+                    }
+                };
+
+                const onPlayerReady = (event) => {
+                    const player = event.target;
+                    secureIframePermissions();
+                    try {
+                        // 자막 모듈이 활성화되어 있을 경우 강제 트랙 언로드
+                        if (player.unloadModule) {
+                            player.unloadModule("captions");
+                            player.unloadModule("cc");
+                        }
+                    } catch (e) {
+                        console.debug("Captions unload:", e);
+                    }
+                    player.playVideo();
+                    resolve();
+                };
+
                 if (ytPlayer && ytPlayer.loadVideoById) {
-                    ytPlayer.loadVideoById(videoId);
+                    ytPlayer.loadVideoById({
+                        videoId: videoId,
+                        startSeconds: 0
+                    });
+                    secureIframePermissions();
+                    try {
+                        if (ytPlayer.unloadModule) {
+                            ytPlayer.unloadModule("captions");
+                            ytPlayer.unloadModule("cc");
+                        }
+                    } catch (e) {}
                     ytPlayer.playVideo();
                     resolve();
                 } else if (isYtReady && window.YT) {
@@ -712,36 +857,32 @@
                         videoId: videoId,
                         playerVars: playerVars,
                         events: {
-                            'onReady': (event) => {
-                                event.target.playVideo();
-                                resolve();
-                            },
+                            'onReady': onPlayerReady,
                             'onStateChange': onYouTubeStateChange
                         }
                     });
+                    setTimeout(secureIframePermissions, 200);
                 }
             });
         }
 
         function onYouTubeStateChange(event) {
-            // 영상 재생 완료 (YT.PlayerState.ENDED === 0)
             if (event.data === YT.PlayerState.ENDED) {
                 closeVideoModal();
             }
         }
 
         /**
-         * 6. 비디오 모달 열기 및 자동 재생 (재생 중에는 슬라이드 및 화면 터치 정지)
+         * 6. 비디오 모달 열기 및 자동 재생
          */
         function openVideoModal(item) {
-            // 브레이크타임 중에는 영상 재생 불가
             if (isBreakTimeActive) {
                 showToast("현재는 휴식 시간입니다. 잠시 눈을 쉬어주세요!");
                 return;
             }
 
-            isClosing = false; // 플래그 초기화
-            isModalActive = true; // 슬라이드 회전 정지
+            isClosing = false;
+            isModalActive = true;
 
             const modal = document.getElementById('video-modal');
             const modalBox = document.getElementById('modal-box');
@@ -792,10 +933,9 @@
         }
 
         /**
-         * 7. 비디오 모달 닫기 (처음 화면인 1페이지로 복귀 및 슬라이드 재개)
+         * 7. 비디오 모달 닫기
          */
         function closeVideoModal() {
-            // 이미 닫히는 중이거나 모달이 활성화되어 있지 않으면 중복 실행 방지
             if (!isModalActive || isClosing) return;
             isClosing = true;
 
@@ -818,23 +958,20 @@
                     try {
                         ytPlayer.stopVideo();
                     } catch (e) {
-                        console.warn("YouTube 정지 예외 처리:", e);
+                        console.warn("YouTube 정지 예외:", e);
                     }
                 }
                 activePlayerType = null;
-                isModalActive = false; // 슬라이드 회전 재개 가능 상태
+                isModalActive = false;
                 isClosing = false;
                 
-                // 처음 기본 화면(1페이지)으로 초기화
                 goToPage(0);
                 resetRotationTimer();
 
-                // [시청 횟수 증가 및 5회 도달 체크]
-                // 닫힐 때 한 번만 정확히 1회 카운트
                 watchCount++;
                 updateWatchCountBadge();
 
-                if (watchCount >= MAX_WATCH_COUNT) {
+                if (watchCount >= appConfig.maxWatchCount) {
                     setTimeout(() => {
                         triggerBreakTime();
                     }, 400);
@@ -844,7 +981,6 @@
 
         document.getElementById('html-player').addEventListener('ended', closeVideoModal);
 
-        // [조작 감지] 모달 투명 오버레이 클릭 및 터치 시 배너 즉시 닫기
         const touchGuard = document.getElementById('touch-guard-overlay');
         touchGuard.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -855,7 +991,6 @@
             closeVideoModal();
         });
 
-        // [조작 감지] 영상 재생 중 키보드 아무 키나 입력 시 즉시 처음 화면으로 닫기
         window.addEventListener('keydown', (e) => {
             if (isModalActive) {
                 e.preventDefault();
@@ -863,7 +998,6 @@
             }
         });
 
-        // [조작 감지] 모달 배경 여백 클릭 시에도 닫기
         document.getElementById('video-modal').addEventListener('click', (e) => {
             if (e.target.id === 'video-modal') {
                 closeVideoModal();
@@ -871,83 +1005,84 @@
         });
 
         /**
-         * 8. 16개 카드 렌더링 (8개씩 분할하여 page-1과 page-2에 배치)
+         * 8. 동적 카드 렌더링 (최대 5페이지 x 8개 = 40개 채널 수용)
          */
         function renderCards(items) {
-            const page1Container = document.getElementById('page-1');
-            const page2Container = document.getElementById('page-2');
-            page1Container.innerHTML = '';
-            page2Container.innerHTML = '';
+            const maxTotalCards = appConfig.totalPages * 8;
 
-            for (let i = 0; i < 16; i++) {
-                const item = items[i] || {
-                    title: `채널 ${i + 1} (미설정)`,
-                    desc: "구글 시트에서 등록해주세요",
-                    video_url: "",
-                    thumbnail_url: ""
-                };
+            for (let p = 0; p < appConfig.totalPages; p++) {
+                const pageContainer = document.getElementById(`page-${p + 1}`);
+                if (!pageContainer) continue;
+                pageContainer.innerHTML = '';
 
-                let thumbSrc = item.thumbnail_url;
-                if (!thumbSrc) {
-                    const ytId = extractYouTubeId(item.video_url);
-                    if (ytId) {
-                        thumbSrc = getYouTubeThumbnail(ytId);
-                    } else {
-                        thumbSrc = `https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80`;
-                    }
-                }
+                const startIdx = p * 8;
+                const endIdx = startIdx + 8;
 
-                const card = document.createElement('div');
-                card.className = `card-button group relative bg-gray-900/90 rounded-3xl overflow-hidden border border-gray-800/80 shadow-xl cursor-pointer flex flex-col justify-end p-6 hover:border-blue-500/80 hover:shadow-2xl hover:shadow-blue-500/20 active:border-blue-400`;
+                for (let i = startIdx; i < endIdx; i++) {
+                    const item = items[i] || {
+                        title: `채널 ${i + 1} (미설정)`,
+                        desc: "구글 시트에서 등록해주세요",
+                        video_url: "",
+                        thumbnail_url: ""
+                    };
 
-                card.innerHTML = `
-                    <div class="absolute inset-0 z-0 overflow-hidden">
-                        <img src="${thumbSrc}" alt="${item.title}" class="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-110 filter brightness-[0.75] group-hover:brightness-90" onerror="this.src='https://placehold.co/600x400/1e293b/94a3b8?text=No+Thumbnail'">
-                        <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/45 to-transparent"></div>
-                    </div>
-
-                    <div class="absolute top-5 right-5 z-10 w-12 h-12 rounded-2xl bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all duration-300 group-hover:bg-blue-600 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-500/50">
-                        <i class="fa-solid fa-play text-sm ml-0.5"></i>
-                    </div>
-
-                    <div class="absolute top-5 left-5 z-10 px-3 py-1 rounded-xl bg-gray-900/70 backdrop-blur-md border border-gray-700 text-xs font-bold text-gray-300 font-mono">
-                        CH ${String(i + 1).padStart(2, '0')}
-                    </div>
-
-                    <div class="relative z-10 flex flex-col space-y-1.5 transform transition-transform duration-300 group-hover:-translate-y-1">
-                        <h3 class="text-xl font-bold text-white line-clamp-1 drop-shadow-md group-hover:text-blue-300 transition-colors">
-                            ${item.title}
-                        </h3>
-                        <p class="text-xs text-gray-300 line-clamp-2 leading-relaxed opacity-90">
-                            ${item.desc || '클릭하면 전체화면 배너로 재생됩니다.'}
-                        </p>
-                    </div>
-                `;
-
-                card.addEventListener('click', () => {
-                    if (isBreakTimeActive) {
-                        showToast("현재는 눈 쉬는 시간입니다. 잠시 기다려주세요!");
-                        return;
+                    let thumbSrc = item.thumbnail_url;
+                    if (!thumbSrc) {
+                        const ytId = extractYouTubeId(item.video_url);
+                        if (ytId) {
+                            thumbSrc = getYouTubeThumbnail(ytId);
+                        } else {
+                            thumbSrc = `https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80`;
+                        }
                     }
 
-                    if (item.video_url) {
-                        openVideoModal(item);
-                    } else {
-                        showToast("등록된 영상 링크가 없습니다.");
-                    }
-                });
+                    const card = document.createElement('div');
+                    card.className = `card-button group relative bg-gray-900/90 rounded-3xl overflow-hidden border border-gray-800/80 shadow-xl cursor-pointer flex flex-col justify-end p-6 hover:border-blue-500/80 hover:shadow-2xl hover:shadow-blue-500/20 active:border-blue-400`;
 
-                // 0~7번은 1페이지, 8~15번은 2페이지에 추가
-                if (i < 8) {
-                    page1Container.appendChild(card);
-                } else {
-                    page2Container.appendChild(card);
+                    card.innerHTML = `
+                        <div class="absolute inset-0 z-0 overflow-hidden">
+                            <img src="${thumbSrc}" alt="${item.title}" class="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-110 filter brightness-[0.75] group-hover:brightness-90" onerror="this.src='https://placehold.co/600x400/1e293b/94a3b8?text=No+Thumbnail'">
+                            <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/45 to-transparent"></div>
+                        </div>
+
+                        <div class="absolute top-5 right-5 z-10 w-12 h-12 rounded-2xl bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all duration-300 group-hover:theme-bg-primary group-hover:scale-110 group-hover:shadow-lg">
+                            <i class="fa-solid fa-play text-sm ml-0.5"></i>
+                        </div>
+
+                        <div class="absolute top-5 left-5 z-10 px-3 py-1 rounded-xl bg-gray-900/70 backdrop-blur-md border border-gray-700 text-xs font-bold text-gray-300 font-mono">
+                            CH ${String(i + 1).padStart(2, '0')}
+                        </div>
+
+                        <div class="relative z-10 flex flex-col space-y-1.5 transform transition-transform duration-300 group-hover:-translate-y-1">
+                            <h3 class="text-xl font-bold text-white line-clamp-1 drop-shadow-md group-hover:theme-text-primary transition-colors">
+                                ${item.title}
+                            </h3>
+                            <p class="text-xs text-gray-300 line-clamp-2 leading-relaxed opacity-90">
+                                ${item.desc || '클릭하면 전체화면 배너로 재생됩니다.'}
+                            </p>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', () => {
+                        if (isBreakTimeActive) {
+                            showToast("현재는 눈 쉬는 시간입니다. 잠시 기다려주세요!");
+                            return;
+                        }
+
+                        if (item.video_url) {
+                            openVideoModal(item);
+                        } else {
+                            showToast("등록된 영상 링크가 없습니다.");
+                        }
+                    });
+
+                    pageContainer.appendChild(card);
                 }
             }
         }
 
         /**
-         * 9. CSV 파서 (RFC 4180 호환)
+         * 9. CSV 파서
          */
         function parseCSV(text) {
             const lines = text.trim().split(/\r\n|\n/);
@@ -985,18 +1120,17 @@
         }
 
         /**
-         * 10. 구글 시트 연동 (최대 16개 항목 수신)
+         * 10. 구글 시트 연동 (최대 40개 항목까지 수신)
          */
         async function fetchGoogleSheetData(sheetCsvUrl, isSilent = false) {
             try {
                 if (!isSilent) {
-                    showToast("구글 시트(16개 항목)를 동기화하는 중...");
+                    showToast("구글 시트를 동기화하는 중...");
                 }
                 
                 let csvText = null;
                 let fetchMethod = '직접 연결';
 
-                // 1단계: 직접 통신 (캐시 방지를 위한 타임스탬프)
                 try {
                     const cacheBuster = `_t=${Date.now()}`;
                     const targetUrl = sheetCsvUrl.includes('?') ? `${sheetCsvUrl}&${cacheBuster}` : `${sheetCsvUrl}?${cacheBuster}`;
@@ -1005,10 +1139,9 @@
                         csvText = await res.text();
                     }
                 } catch (e) {
-                    console.warn("직접 fetch 차단됨 (file:/// 환경) -> 1차 프록시로 전환");
+                    console.warn("직접 fetch 차단됨 -> 1차 프록시로 전환");
                 }
 
-                // 2단계: AllOrigins CORS 프록시
                 if (!csvText) {
                     try {
                         fetchMethod = '프록시 1 우회';
@@ -1022,7 +1155,6 @@
                     }
                 }
 
-                // 3단계: CorsProxy.io
                 if (!csvText) {
                     try {
                         fetchMethod = '프록시 2 우회';
@@ -1043,10 +1175,10 @@
                 const parsed = parseCSV(csvText);
 
                 if (parsed.length > 0) {
-                    currentMediaItems = parsed.slice(0, 16); // 최대 16개 수용
+                    currentMediaItems = parsed.slice(0, 40); // 최대 5페이지 분량 (40개)
                     renderCards(currentMediaItems);
                     if (!isSilent) {
-                        showToast(`구글 시트 연동 성공 (${fetchMethod}, ${currentMediaItems.length}개 로드)`);
+                        showToast(`구글 시트 연동 완료 (${fetchMethod}, ${currentMediaItems.length}개 로드)`);
                     }
                     localStorage.setItem('kiosk_cached_csv', csvText);
                 } else {
@@ -1054,20 +1186,17 @@
                 }
             } catch (err) {
                 console.error("데이터 동기화 실패:", err);
-                
                 const cached = localStorage.getItem('kiosk_cached_csv');
                 if (cached) {
                     const parsedCached = parseCSV(cached);
                     if (parsedCached.length > 0) {
-                        currentMediaItems = parsedCached.slice(0, 16);
+                        currentMediaItems = parsedCached.slice(0, 40);
                         renderCards(currentMediaItems);
                         if (!isSilent) showToast("네트워크 실패: 이전 캐시 데이터로 표시합니다.");
                         return;
                     }
                 }
-                
-                if (!isSilent) showToast("시트 동기화 실패: 기본 데모 16개 항목으로 표시합니다.");
-                renderCards(DEFAULT_MEDIA_ITEMS);
+                if (!isSilent) showToast("시트 동기화 실패: 기본 데이터로 표시합니다.");
             }
         }
 
@@ -1078,7 +1207,7 @@
             const toast = document.createElement('div');
             toast.id = 'kiosk-toast';
             toast.className = 'fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900/95 text-white px-6 py-3 rounded-2xl border border-gray-700 shadow-2xl backdrop-blur-md text-sm font-medium flex items-center space-x-2 transition-all';
-            toast.innerHTML = `<i class="fa-solid fa-circle-check text-blue-400"></i><span>${msg}</span>`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-check theme-text-primary"></i><span>${msg}</span>`;
             document.body.appendChild(toast);
 
             setTimeout(() => {
@@ -1088,22 +1217,41 @@
         }
 
         /**
-         * 11. 초기화 및 이벤트 리스너
+         * 11. 자동 전체화면(Fullscreen) 우선 적용 로직
+         */
+        function requestKioskFullscreen() {
+            if (!document.fullscreenElement) {
+                const el = document.documentElement;
+                const rfs = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+                if (rfs) {
+                    rfs.call(el).catch(() => {
+                        // 브라우저 정책상 사용자 인터랙션 이전 자동 전체화면 차단 시 무시
+                    });
+                }
+            }
+        }
+
+        /**
+         * 12. 초기화 및 관리자 UI 바인딩
          */
         window.onload = function() {
-            resizeKiosk();
-            resetIdleTimer(); // 3분 밝기 감소 타이머 초기 가동
-            updateWatchCountBadge(); // 시청 횟수 배지 초기화
+            applyAppConfig();
+            resetIdleTimer();
+            updateWatchCountBadge();
+
+            // 최초 화면 터치나 클릭 시 자동 전체화면으로 전환
+            const autoFullscreenHandler = () => {
+                requestKioskFullscreen();
+                window.removeEventListener('pointerdown', autoFullscreenHandler);
+            };
+            window.addEventListener('pointerdown', autoFullscreenHandler);
             
-            // 저장된 커스텀 URL이 없으면 제공해주신 기본 시트 URL을 우선 사용
             const activeUrl = localStorage.getItem(STORAGE_SHEET_KEY) || DEFAULT_SHEET_URL;
             document.getElementById('sheet-url-input').value = activeUrl;
             fetchGoogleSheetData(activeUrl);
 
-            // 5초 자동 페이지 로테이션 루프 시작
             startRotationCycle();
 
-            // 30초 주기 백그라운드 자동 갱신 시작 (영상 시청 중에는 방해하지 않음)
             if (autoSyncTimer) clearInterval(autoSyncTimer);
             autoSyncTimer = setInterval(() => {
                 if (!isModalActive) {
@@ -1114,12 +1262,8 @@
         };
 
         // 수동 페이지 버튼 클릭
-        document.getElementById('btn-prev-page').addEventListener('click', () => {
-            togglePrevPage();
-        });
-        document.getElementById('btn-next-page').addEventListener('click', () => {
-            toggleNextPage();
-        });
+        document.getElementById('btn-prev-page').addEventListener('click', togglePrevPage);
+        document.getElementById('btn-next-page').addEventListener('click', toggleNextPage);
 
         // 자동 회전 일시정지 / 재생 토글
         document.getElementById('btn-toggle-rotate').addEventListener('click', () => {
@@ -1137,44 +1281,138 @@
         // 전체화면 토글
         document.getElementById('btn-fullscreen').addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.warn(`전체화면 오류: ${err.message}`);
-                });
+                requestKioskFullscreen();
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         });
 
-        // 설정 모달
+        // 설정 모달 열기/닫기
         const settingsModal = document.getElementById('settings-modal');
         document.getElementById('btn-settings').addEventListener('click', () => {
+            // 관리자 폼 초기화 채우기
+            document.getElementById('cfg-app-title').value = appConfig.appTitle;
+            document.getElementById('cfg-page-count').value = appConfig.totalPages;
+            document.getElementById('val-page-count').textContent = `${appConfig.totalPages}페이지 (${appConfig.totalPages * 8}채널)`;
+
+            document.getElementById('cfg-rotate-interval').value = appConfig.rotateIntervalSec;
+            document.getElementById('val-rotate-interval').textContent = `${appConfig.rotateIntervalSec}초`;
+
+            document.getElementById('cfg-max-watch').value = appConfig.maxWatchCount;
+            document.getElementById('val-max-watch').textContent = `${appConfig.maxWatchCount}회`;
+
+            document.getElementById('cfg-break-time').value = appConfig.breakMinutes;
+            document.getElementById('val-break-time').textContent = `${appConfig.breakMinutes}분`;
+
+            highlightActiveThemeButton(appConfig.theme);
+
             settingsModal.classList.remove('hidden');
         });
+
         document.getElementById('settings-close-btn').addEventListener('click', () => {
             settingsModal.classList.add('hidden');
         });
 
-        document.getElementById('save-settings-btn').addEventListener('click', () => {
+        // 관리자 인증 버튼
+        document.getElementById('btn-admin-login').addEventListener('click', () => {
+            const pwd = document.getElementById('admin-pwd-input').value.trim();
+            if (pwd === ADMIN_PASSWORD) {
+                isAdminAuthenticated = true;
+                document.getElementById('admin-badge').textContent = '인증 완료';
+                document.getElementById('admin-badge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30';
+                document.getElementById('admin-auth-box').classList.add('hidden');
+                document.getElementById('admin-controls').classList.remove('hidden');
+                showToast("관리자 인증에 성공했습니다.");
+            } else {
+                showToast("비밀번호가 올바르지 않습니다.");
+                document.getElementById('admin-pwd-input').value = '';
+            }
+        });
+
+        // 관리자 슬라이더 라벨 바인딩
+        document.getElementById('cfg-page-count').addEventListener('input', (e) => {
+            document.getElementById('val-page-count').textContent = `${e.target.value}페이지 (${e.target.value * 8}채널)`;
+        });
+
+        document.getElementById('cfg-rotate-interval').addEventListener('input', (e) => {
+            document.getElementById('val-rotate-interval').textContent = `${e.target.value}초`;
+        });
+
+        document.getElementById('cfg-max-watch').addEventListener('input', (e) => {
+            document.getElementById('val-max-watch').textContent = `${e.target.value}회`;
+        });
+
+        document.getElementById('cfg-break-time').addEventListener('input', (e) => {
+            document.getElementById('val-break-time').textContent = `${e.target.value}분`;
+        });
+
+        // 테마 선택 버튼
+        function highlightActiveThemeButton(theme) {
+            document.querySelectorAll('.theme-choice-btn').forEach(btn => {
+                if (btn.getAttribute('data-set-theme') === theme) {
+                    btn.classList.add('border-blue-500', 'bg-blue-900/40');
+                } else {
+                    btn.classList.remove('border-blue-500', 'bg-blue-900/40');
+                }
+            });
+        }
+
+        let selectedTheme = appConfig.theme;
+        document.querySelectorAll('.theme-choice-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedTheme = btn.getAttribute('data-set-theme');
+                highlightActiveThemeButton(selectedTheme);
+            });
+        });
+
+        // 저장 및 적용 버튼
+        document.getElementById('save-settings-btn').addEventListener('click', (e) => {
+            if (e) e.preventDefault();
             const url = document.getElementById('sheet-url-input').value.trim();
             if (url) {
                 localStorage.setItem(STORAGE_SHEET_KEY, url);
-                fetchGoogleSheetData(url);
-            } else {
-                localStorage.removeItem(STORAGE_SHEET_KEY);
-                fetchGoogleSheetData(DEFAULT_SHEET_URL);
-                showToast("기본 고정 시트로 복원되었습니다.");
             }
+
+            if (isAdminAuthenticated) {
+                appConfig.appTitle = document.getElementById('cfg-app-title').value.trim() || "나나자매와 띠진이";
+                appConfig.totalPages = parseInt(document.getElementById('cfg-page-count').value, 10);
+                appConfig.rotateIntervalSec = parseInt(document.getElementById('cfg-rotate-interval').value, 10);
+                appConfig.maxWatchCount = parseInt(document.getElementById('cfg-max-watch').value, 10);
+                appConfig.breakMinutes = parseInt(document.getElementById('cfg-break-time').value, 10);
+                appConfig.theme = selectedTheme;
+
+                saveConfig();
+                applyAppConfig();
+                startRotationCycle();
+            }
+
+            const activeUrl = localStorage.getItem(STORAGE_SHEET_KEY) || DEFAULT_SHEET_URL;
+            fetchGoogleSheetData(activeUrl);
+
             settingsModal.classList.add('hidden');
+            showToast("모든 설정이 성공적으로 저장되었습니다.");
         });
 
-        document.getElementById('reset-default-btn').addEventListener('click', () => {
-            document.getElementById('sheet-url-input').value = DEFAULT_SHEET_URL;
+        // 기본값 복원 버튼
+        document.getElementById('reset-default-btn').addEventListener('click', (e) => {
+            if (e) e.preventDefault();
+            localStorage.removeItem(STORAGE_CONFIG_KEY);
             localStorage.removeItem(STORAGE_SHEET_KEY);
+
+            appConfig.appTitle = "나나자매와 띠진이";
+            appConfig.totalPages = 2;
+            appConfig.rotateIntervalSec = 5;
+            appConfig.maxWatchCount = 5;
+            appConfig.breakMinutes = 5;
+            appConfig.theme = "default";
+
+            document.getElementById('sheet-url-input').value = DEFAULT_SHEET_URL;
+            applyAppConfig();
+            startRotationCycle();
             fetchGoogleSheetData(DEFAULT_SHEET_URL);
+
             settingsModal.classList.add('hidden');
-            showToast("기본 고정 시트로 초기화되었습니다.");
+            showToast("기본 설정값으로 복원되었습니다.");
         });
 
         document.getElementById('btn-refresh').addEventListener('click', () => {
